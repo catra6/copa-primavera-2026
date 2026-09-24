@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="description" content="Torneo de fútbol - Grupos, fixture y resultados en vivo">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>⚽ Torneo Primavera 2026</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-content">
+        <div class="header-left">
+          <span class="header-icon">⚽</span>
+          <div>
+            <h1 class="app-title">Torneo Primavera 2026</h1>
+            <span class="app-subtitle">Fase de grupos</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs" id="navTabs">
+      <button class="nav-tab active" data-tab="standings">Tabla</button>
+      <button class="nav-tab" data-tab="fixture">Partidos</button>
+      <button class="nav-tab" data-tab="playoffs">Playoffs</button>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content" id="mainContent">
+      <!-- Standings Tab -->
+      <section class="tab-content active" id="tab-standings">
+        <!-- Phase Selector -->
+        <div class="phase-selector" id="phaseSelector">
+          <button class="phase-btn active" data-phase="1">Fase 1</button>
+          <button class="phase-btn" data-phase="2">Fase 2</button>
+        </div>
+        <div id="groupsContainer"></div>
+      </section>
+
+      <!-- Fixture Tab -->
+      <section class="tab-content" id="tab-fixture">
+        <div class="phase-selector" id="fixturePhaseSelector">
+          <button class="phase-btn active" data-fixture-phase="0">Fase 1</button>
+          <button class="phase-btn" data-fixture-phase="1">Fase 2</button>
+        </div>
+        <div id="fixtureContainer"></div>
+      </section>
+
+      <!-- Playoffs Tab -->
+      <section class="tab-content" id="tab-playoffs">
+        <div id="playoffsContainer"></div>
+      </section>
+    </main>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+      <div class="loading-spinner"></div>
+      <p class="loading-text">Cargando torneo...</p>
+    </div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="engine.js"></script>
+  <script src="app.js"></script>
+</body>
+
+</html>
