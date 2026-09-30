@@ -106,18 +106,11 @@ const TournamentEngine = (() => {
       return fallbackGroups;
     }
 
-    let hasPlayedMatches = false;
-    for (const round of fixturePhase.rounds) {
-      for (const m of round.matches) {
-        if (m.homeScore !== null && m.awayScore !== null) {
-          hasPlayedMatches = true;
-          break;
-        }
-      }
-      if (hasPlayedMatches) break;
-    }
-
-    if (!hasPlayedMatches) return fallbackGroups;
+    const isPlaceholder = (name) => {
+      if (!name) return true;
+      const lower = name.toLowerCase().trim();
+      return lower === 'a definir' || lower === 'por definir' || lower === 'vacío' || lower === 'vacio' || lower.includes('grupo 1') || lower.includes('grupo 2');
+    };
 
     const groupsMap = {};
 
@@ -125,14 +118,17 @@ const TournamentEngine = (() => {
       for (const m of round.matches) {
         const g = m.group || (fallbackGroups[0] ? fallbackGroups[0].name : 'Grupo A');
         if (!groupsMap[g]) groupsMap[g] = {};
-        if (m.home && !groupsMap[g][m.home]) {
+        if (m.home && !isPlaceholder(m.home) && !groupsMap[g][m.home]) {
           groupsMap[g][m.home] = { name: m.home, played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDiff: 0, points: 0 };
         }
-        if (m.away && !groupsMap[g][m.away]) {
+        if (m.away && !isPlaceholder(m.away) && !groupsMap[g][m.away]) {
           groupsMap[g][m.away] = { name: m.away, played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDiff: 0, points: 0 };
         }
       }
     }
+
+    // If no real teams found in fixture, use fallback
+    if (Object.keys(groupsMap).length === 0) return fallbackGroups;
 
     for (const round of fixturePhase.rounds) {
       for (const m of round.matches) {

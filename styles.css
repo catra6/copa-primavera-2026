@@ -316,8 +316,8 @@ body {
   font-weight: 600;
   color: var(--text-tertiary);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  padding: var(--space-sm) var(--space-xs);
+  letter-spacing: 0.03em;
+  padding: var(--space-sm) 4px;
   text-align: center;
   white-space: nowrap;
   border-bottom: 1px solid var(--border-light);
@@ -326,11 +326,11 @@ body {
 
 .standings-table thead th:first-child {
   text-align: left;
-  padding-left: var(--space-lg);
+  padding-left: var(--space-sm);
 }
 
 .standings-table thead th:last-child {
-  padding-right: var(--space-lg);
+  padding-right: var(--space-sm);
 }
 
 .standings-table tbody tr {
@@ -355,18 +355,20 @@ body {
   font-size: var(--fs-base);
   font-weight: 500;
   color: var(--text-secondary);
-  padding: var(--space-md) var(--space-xs);
+  padding: 9px 4px;
   text-align: center;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .standings-table tbody td:first-child {
   text-align: left;
   padding-left: 0;
+  white-space: normal;
 }
 
 .standings-table tbody td:last-child {
-  padding-right: var(--space-lg);
+  padding-right: var(--space-sm);
 }
 
 /* Position + Team name cell */
@@ -374,13 +376,14 @@ body {
   display: flex;
   align-items: center;
   gap: 0;
+  min-width: 0;
 }
 
 .team-pos-indicator {
   width: 3px;
-  height: 28px;
+  height: 24px;
   border-radius: 2px;
-  margin-right: var(--space-md);
+  margin-right: 6px;
   flex-shrink: 0;
 }
 
@@ -393,11 +396,12 @@ body {
 }
 
 .team-position {
-  font-size: var(--fs-sm);
+  font-size: var(--fs-xs);
   font-weight: 700;
   color: var(--text-tertiary);
-  min-width: 20px;
+  min-width: 16px;
   text-align: center;
+  flex-shrink: 0;
 }
 
 .team-emoji {
@@ -414,15 +418,16 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .team-logo {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   object-fit: contain;
   flex-shrink: 0;
   border-radius: 0;
-  margin-right: 6px;
+  margin-right: 5px;
 }
 
 .match-team .team-logo {
@@ -455,14 +460,26 @@ body {
   font-weight: 400;
 }
 
-/* Points column */
-.col-pts {
-  font-weight: 700 !important;
-  color: var(--text-primary) !important;
-  font-size: var(--fs-md) !important;
+/* Stat columns compact widths */
+.standings-table th:nth-child(2),
+.standings-table td:nth-child(2),
+.standings-table th:nth-child(3),
+.standings-table td:nth-child(3),
+.standings-table th:nth-child(4),
+.standings-table td:nth-child(4),
+.standings-table th:nth-child(5),
+.standings-table td:nth-child(5) {
+  width: 26px;
+  min-width: 22px;
 }
 
 /* Diff column color */
+.col-diff {
+  font-weight: 600;
+  width: 30px;
+  min-width: 26px;
+}
+
 .col-diff.positive {
   color: var(--form-win);
 }
@@ -474,7 +491,18 @@ body {
 /* Goals column */
 .col-gls {
   font-size: var(--fs-xs) !important;
-  letter-spacing: 0;
+  letter-spacing: -0.02em;
+  width: 38px;
+  min-width: 32px;
+}
+
+/* Points column */
+.col-pts {
+  font-weight: 700 !important;
+  color: var(--text-primary) !important;
+  font-size: var(--fs-base) !important;
+  width: 30px;
+  min-width: 26px;
 }
 
 /* ============================================
@@ -529,6 +557,20 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   margin-bottom: var(--space-sm);
+  padding-left: var(--space-xs);
+}
+
+.fixture-group-section {
+  margin-bottom: var(--space-md);
+}
+
+.fixture-group-title {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--accent-blue);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: var(--space-md) 0 var(--space-xs);
   padding-left: var(--space-xs);
 }
 
@@ -888,6 +930,75 @@ body {
 }
 
 /* ============================================
+   Standings Locked (Phase 2 incomplete)
+   ============================================ */
+
+.standings-locked-wrapper {
+  position: relative;
+  min-height: 280px;
+}
+
+.standings-locked-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(245, 245, 245, 0.7);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3xl) var(--space-xl);
+  text-align: center;
+}
+
+.locked-icon {
+  font-size: 2.5rem;
+  margin-bottom: var(--space-md);
+  opacity: 0.6;
+  animation: lockedPulse 2.5s ease-in-out infinite;
+}
+
+@keyframes lockedPulse {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.08); opacity: 0.85; }
+}
+
+.locked-title {
+  font-size: var(--fs-xl);
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: var(--space-xs);
+}
+
+.locked-subtitle {
+  font-size: var(--fs-md);
+  color: var(--text-secondary);
+  font-weight: 500;
+  max-width: 300px;
+  line-height: 1.5;
+  margin-bottom: var(--space-md);
+}
+
+.locked-progress {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--accent-blue);
+  background: var(--accent-blue-light);
+  padding: var(--space-xs) var(--space-lg);
+  border-radius: var(--radius-full);
+}
+
+.standings-blurred {
+  filter: blur(6px) grayscale(0.6);
+  opacity: 0.45;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ============================================
    Loading
    ============================================ */
 
@@ -973,8 +1084,92 @@ body {
 }
 
 /* ============================================
-   Responsive - Wider on Desktop
+   Responsive - Mobile & Desktop
    ============================================ */
+
+@media (max-width: 480px) {
+  .main-content {
+    padding: 0 var(--space-sm);
+  }
+
+  .group-card {
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-md);
+  }
+
+  .group-header {
+    padding: var(--space-sm) var(--space-md);
+  }
+
+  .standings-table thead th {
+    font-size: 10px;
+    padding: 5px 2px;
+  }
+
+  .standings-table thead th:first-child {
+    padding-left: 6px;
+  }
+
+  .standings-table thead th:last-child,
+  .standings-table tbody td:last-child {
+    padding-right: 6px;
+  }
+
+  .standings-table tbody td {
+    font-size: 11.5px;
+    padding: 8px 2px;
+  }
+
+  .team-pos-indicator {
+    height: 18px;
+    margin-right: 4px;
+  }
+
+  .team-position {
+    font-size: 11px;
+    min-width: 13px;
+  }
+
+  .team-logo {
+    width: 16px;
+    height: 16px;
+    margin-right: 4px;
+  }
+
+  .team-name {
+    font-size: 12px;
+  }
+
+  .standings-table th:nth-child(2),
+  .standings-table td:nth-child(2),
+  .standings-table th:nth-child(3),
+  .standings-table td:nth-child(3),
+  .standings-table th:nth-child(4),
+  .standings-table td:nth-child(4),
+  .standings-table th:nth-child(5),
+  .standings-table td:nth-child(5) {
+    width: 20px;
+    min-width: 18px;
+  }
+
+  .col-diff {
+    width: 24px;
+    min-width: 22px;
+    font-size: 11px;
+  }
+
+  .col-gls {
+    width: 32px;
+    min-width: 28px;
+    font-size: 10px !important;
+  }
+
+  .col-pts {
+    width: 24px;
+    min-width: 22px;
+    font-size: 12.5px !important;
+  }
+}
 
 @media (min-width: 600px) {
   #app {

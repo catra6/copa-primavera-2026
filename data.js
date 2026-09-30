@@ -15,7 +15,7 @@ const DataSource = (() => {
   };
 
   async function fetchCSV(gid) {
-    const url = `${PUB_BASE}?output=csv&gid=${gid}`;
+    const url = `${PUB_BASE}?output=csv&gid=${gid}&t=${Date.now()}`;
     try {
       // Try direct first
       const r = await fetch(url, { cache: 'no-store' });
@@ -94,7 +94,7 @@ const DataSource = (() => {
   }
 
   // Parse fixture from the Fixture sheet
-  // Layout: phase headers, then date headers, then group headers, then 2 match rows per group
+  // Layout: matches are top row (home team + score) vs bottom row (away team + score)
   function parseFixture(rows) {
     const phases = [];
     let currentPhase = null;
@@ -116,8 +116,6 @@ const DataSource = (() => {
       // Date headers row (e.g. "FECHA 1", "", "", "", "", "", "FECHA 2", ...)
       if (col1.startsWith('FECHA ')) {
         dateHeaders = [];
-        // Each date block spans 6 columns: col1(local), col2(score), col3(empty), col4(away), col5(score), col6(empty?)
-        // Actually: teamA, scoreA, empty, teamB, scoreB, empty
         for (let c = 1; c < row.length; c++) {
           const val = (row[c] || '').trim();
           if (val.startsWith('FECHA ')) {
@@ -128,40 +126,57 @@ const DataSource = (() => {
         continue;
       }
 
-      // Group header row (e.g. "Grupo A", "", "", "", "", "", "Grupo A", ...)
+      // Group header row (e.g. "Grupo A", "Zona A")
       if (col1.startsWith('Grupo ') || col1.startsWith('Zona ')) {
         const groupName = col1;
         i++;
 
-        // Next 2 rows are match rows for this group
-        for (let m = 0; m < 2 && i < rows.length; m++, i++) {
-          const matchRow = rows[i];
-          if (!matchRow || !(matchRow[1] || '').trim()) { i++; m--; continue; }
+        // Top row = Local teams + scores; Bottom row = Visitor teams + scores
+        const topRow = rows[i];
+        const bottomRow = rows[i + 1];
+        i += 2;
 
-          // For each date, extract a match
-          for (const dh of dateHeaders) {
-            const c = dh.startCol;
-            const homeTeam = (matchRow[c] || '').trim();
-            const homeScore = (matchRow[c + 1] || '').trim();
-            const awayTeam = (matchRow[c + 3] || '').trim();
-            const awayScore = (matchRow[c + 4] || '').trim();
+        if (!topRow || !bottomRow) continue;
 
-            if (homeTeam || awayTeam) {
-              // Find or create round
-              let round = currentPhase.rounds.find(r => r.name === dh.name);
-              if (!round) {
-                round = { name: dh.name, group: groupName, matches: [] };
-                currentPhase.rounds.push(round);
-              }
+        for (const dh of dateHeaders) {
+          const c = dh.startCol;
 
-              round.matches.push({
-                home: homeTeam,
-                away: awayTeam,
-                homeScore: homeScore !== '' ? parseInt(homeScore) : null,
-                awayScore: awayScore !== '' ? parseInt(awayScore) : null,
-                group: groupName,
-              });
-            }
+          // Match 1 (left column: row top vs row bottom)
+          const home1 = (topRow[c] || '').trim();
+          const score1 = (topRow[c + 1] || '').trim();
+          const away1 = (bottomRow[c] || '').trim();
+          const score2 = (bottomRow[c + 1] || '').trim();
+
+          // Match 2 (right column: row top vs row bottom)
+          const home2 = (topRow[c + 3] || '').trim();
+          const score3 = (topRow[c + 4] || '').trim();
+          const away2 = (bottomRow[c + 3] || '').trim();
+          const score4 = (bottomRow[c + 4] || '').trim();
+
+          let round = currentPhase.rounds.find(r => r.name === dh.name);
+          if (!round) {
+            round = { name: dh.name, matches: [] };
+            currentPhase.rounds.push(round);
+          }
+
+          if (home1 || away1) {
+            round.matches.push({
+              home: home1,
+              away: away1,
+              homeScore: score1 !== '' ? parseInt(score1) : null,
+              awayScore: score2 !== '' ? parseInt(score2) : null,
+              group: groupName,
+            });
+          }
+
+          if (home2 || away2) {
+            round.matches.push({
+              home: home2,
+              away: away2,
+              homeScore: score3 !== '' ? parseInt(score3) : null,
+              awayScore: score4 !== '' ? parseInt(score4) : null,
+              group: groupName,
+            });
           }
         }
         continue;
@@ -278,39 +293,90 @@ const DataSource = (() => {
   }
 
   async function fetchLogos() {
-    const logos = {};
+    const CACHE_KEY = 'torneo_logos_v2';
+    let cached = {};
+    try {
+      cached = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+    } catch (_) {}
+
+    const logos = { ...cached };
+
     try {
       const pubSheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSgqvRsQGtad6abgNSpfTU6CEIZCDNQMPK3j6_BiiDk5_24z7TB2VYm8i7yfc_uN5M1Cxb8LwoYaIFE/pubhtml/sheet?headers=false&gid=0';
-      const r = await fetch(pubSheetUrl);
-      if (!r.ok) return logos;
-      const html = await r.text();
+      let html = '';
+      try {
+        const r = await fetch(pubSheetUrl);
+        if (r.ok) html = await r.text();
+      } catch (err) {
+        const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(pubSheetUrl)}`;
+        const r = await fetch(proxyUrl);
+        if (r.ok) html = await r.text();
+      }
+
+      if (!html) return logos;
+
       const regex = /<td[^>]*>([^<]+)<\/td>\s*<td[^>]*><div[^>]*><img[^>]+src=["']([^"']+)["']/gi;
       let m;
-      const tasks = [];
+      const foundTeams = [];
       while ((m = regex.exec(html)) !== null) {
         const teamName = m[1].trim();
-        // Request original high-resolution image (=s400) instead of cell thumbnail (=w100-h20)
-        const logoUrl = m[2].replace(/=w\d+-h\d+.*$/, '=s400');
+        const logoUrl = m[2];
         if (teamName && teamName !== 'EQUIPO') {
-          tasks.push((async () => {
-            try {
-              const imgResp = await fetch(logoUrl);
-              const buffer = await imgResp.arrayBuffer();
-              const bytes = new Uint8Array(buffer);
-              let binary = '';
-              for (let i = 0; i < bytes.byteLength; i++) {
-                binary += String.fromCharCode(bytes[i]);
-              }
-              const base64 = btoa(binary);
-              const mime = imgResp.headers.get('content-type') || 'image/png';
-              logos[teamName] = `data:${mime};base64,${base64}`;
-            } catch (err) {
-              logos[teamName] = logoUrl;
-            }
-          })());
+          foundTeams.push({ teamName, logoUrl });
         }
       }
+
+      const toDataUrl = async (blob) => {
+        if (typeof FileReader !== 'undefined') {
+          return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(blob);
+          });
+        }
+        if (blob && typeof blob.arrayBuffer === 'function') {
+          const buf = await blob.arrayBuffer();
+          const base64 = typeof Buffer !== 'undefined' ? Buffer.from(buf).toString('base64') : '';
+          return `data:${blob.type || 'image/png'};base64,${base64}`;
+        }
+        return null;
+      };
+
+      const tasks = foundTeams.map(async ({ teamName, logoUrl }) => {
+        if (logos[teamName] && typeof logos[teamName] === 'string' && logos[teamName].startsWith('data:')) {
+          logos[teamName.toLowerCase()] = logos[teamName];
+          return;
+        }
+
+        let blob = null;
+        try {
+          const resp = await fetch(logoUrl);
+          if (resp.ok) blob = await resp.blob();
+        } catch (_) {}
+
+        if (!blob) {
+          try {
+            const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(logoUrl)}`;
+            const resp = await fetch(proxyUrl);
+            if (resp.ok) blob = await resp.blob();
+          } catch (_) {}
+        }
+
+        if (blob) {
+          const dataUrl = await toDataUrl(blob);
+          if (dataUrl) {
+            logos[teamName] = dataUrl;
+            logos[teamName.toLowerCase()] = dataUrl;
+          }
+        }
+      });
+
       await Promise.all(tasks);
+
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify(logos));
+      } catch (_) {}
     } catch (e) {
       console.warn('Could not fetch team logos:', e);
     }

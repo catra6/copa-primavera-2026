@@ -168,12 +168,90 @@ const App = (() => {
   // =============================================
   // Standings
   // =============================================
+
+  /**
+   * Check if all phase 2 matches are completed.
+   * Every team in fase2 groups must have played === 3.
+   */
+  function isPhase2Complete() {
+    if (!data.fase2 || data.fase2.length === 0) return false;
+    for (const group of data.fase2) {
+      if (!group.teams || group.teams.length === 0) return false;
+      for (const team of group.teams) {
+        if (team.played < 3) return false;
+      }
+    }
+    return true;
+  }
+
   function renderStandings() {
     const container = document.getElementById('groupsContainer');
     const rawGroups = currentPhase === 1 ? data.fase1 : data.fase2;
     const phaseFixture = data.fixture[currentPhase - 1] || null;
-    const groups = TournamentEngine.calculateStandings(phaseFixture, rawGroups);
+    const calculated = TournamentEngine.calculateStandings(phaseFixture, rawGroups);
+    const groups = (calculated && calculated.length > 0) ? calculated : rawGroups;
     const phaseMatches = phaseFixture ? TournamentEngine.getPhaseMatches(phaseFixture) : [];
+
+    // Phase 2 locked until all matches are played
+    if (currentPhase === 2 && !isPhase2Complete()) {
+      // Count total played matches across all fase2 teams
+      let totalPlayed = 0;
+      let totalTeams = 0;
+      for (const group of data.fase2) {
+        for (const team of group.teams) {
+          totalPlayed += team.played;
+          totalTeams++;
+        }
+      }
+      // Each match is counted twice (once per team), so actual matches played = totalPlayed / 2
+      const matchesPlayed = Math.floor(totalPlayed / 2);
+      // 8 teams × 3 games / 2 = 12 total matches
+      const totalMatches = Math.floor((totalTeams * 3) / 2);
+
+      let html = '<div class="standings-locked-wrapper">';
+      html += '<div class="standings-locked-overlay">';
+      html += '<div class="locked-icon">🔒</div>';
+      html += '<p class="locked-title">Tabla no disponible</p>';
+      html += `<p class="locked-subtitle">Se revelan las posiciones cuando se completen todos los partidos de la Fase 2.</p>`;
+      html += `<p class="locked-progress">${matchesPlayed} / ${totalMatches} partidos jugados</p>`;
+      html += '</div>';
+
+      // Render blurred table behind the overlay
+      html += '<div class="standings-blurred">';
+      groups.forEach((group, gi) => {
+        const sortedTeams = TournamentEngine.sortStandings(group.teams, phaseMatches);
+        html += `
+          <div class="group-card" style="animation-delay: ${gi * 0.05}s">
+            <div class="group-header">
+              <h2>${group.name}</h2>
+            </div>
+            <div class="table-scroll">
+              <table class="standings-table">
+                <thead>
+                  <tr>
+                    <th></th>
+                    <th>PJ</th>
+                    <th>G</th>
+                    <th>E</th>
+                    <th>P</th>
+                    <th>DIF</th>
+                    <th>GLS</th>
+                    <th>PTS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${sortedTeams.map((t, i) => renderStandingRow(t, i, phaseFixture)).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>`;
+      });
+      html += '</div>'; // .standings-blurred
+      html += '</div>'; // .standings-locked-wrapper
+
+      container.innerHTML = html;
+      return;
+    }
 
     let html = '';
     groups.forEach((group, gi) => {
@@ -195,7 +273,6 @@ const App = (() => {
                   <th>P</th>
                   <th>DIF</th>
                   <th>GLS</th>
-                  <th class="col-form-header">Últimos</th>
                   <th>PTS</th>
                 </tr>
               </thead>
@@ -214,20 +291,18 @@ const App = (() => {
   }
 
   function getTeamLogoHtml(teamName) {
-    if (!teamName || !data || !data.logos || !data.logos[teamName]) return '';
-    return `<img class="team-logo" src="${data.logos[teamName]}" alt="${teamName}" referrerpolicy="no-referrer" onerror="this.style.display='none'" />`;
+    if (!teamName || !data || !data.logos) return '';
+    const name = teamName.trim();
+    const logo = data.logos[name] || data.logos[name.toLowerCase()] || '';
+    if (!logo) return '';
+    return `<img class="team-logo" src="${logo}" alt="${name}" referrerpolicy="no-referrer" onerror="this.style.display='none'" />`;
   }
 
   function renderStandingRow(team, index, phaseFixture) {
     const pos = index + 1;
     const qualified = currentPhase === 1 && pos <= 2;
-    const form = TournamentEngine.getFormForPhase(team.name, phaseFixture);
     const diffPrefix = team.goalDiff > 0 ? '+' : '';
     const diffClass = team.goalDiff > 0 ? 'positive' : (team.goalDiff < 0 ? 'negative' : '');
-
-    const formHtml = form.length > 0
-      ? `<div class="form-badges">${form.map(f => `<span class="form-badge ${f}">${f}</span>`).join('')}</div>`
-      : '<span style="color:var(--text-muted)">—</span>';
 
     const logoHtml = getTeamLogoHtml(team.name);
     const isEmpty = !team.name;
@@ -250,7 +325,6 @@ const App = (() => {
         <td>${team.lost}</td>
         <td class="col-diff ${diffClass}">${diffPrefix}${team.goalDiff}</td>
         <td class="col-gls">${team.goalsFor}:${team.goalsAgainst}</td>
-        <td>${formHtml}</td>
         <td class="col-pts">${team.points}</td>
       </tr>`;
   }
@@ -282,9 +356,25 @@ const App = (() => {
     Object.entries(roundsByName).forEach(([name, matches]) => {
       html += `
         <div class="fixture-round">
-          <h3 class="round-title">${name}</h3>
-          ${matches.map(m => renderMatchCard(m)).join('')}
-        </div>`;
+          <h3 class="round-title">${name}</h3>`;
+
+      // Separate matches by group
+      const byGroup = {};
+      matches.forEach(m => {
+        const g = m.group || 'Grupo A';
+        if (!byGroup[g]) byGroup[g] = [];
+        byGroup[g].push(m);
+      });
+
+      Object.entries(byGroup).forEach(([groupName, groupMatches]) => {
+        html += `
+          <div class="fixture-group-section">
+            <h4 class="fixture-group-title">${groupName}</h4>
+            ${groupMatches.map(m => renderMatchCard(m)).join('')}
+          </div>`;
+      });
+
+      html += `</div>`;
     });
 
     container.innerHTML = html;
