@@ -85,15 +85,17 @@
       <section class="tab-content" id="tab-playoffs">
         <div id="playoffsContainer"></div>
       </section>
-    </main>
 
-    <!-- Team Stats Modal (PES-Style Pentagon Radar) -->
-    <div class="team-modal-overlay hidden" id="teamModalOverlay" aria-hidden="true">
-      <div class="team-modal-card" id="teamModalCard">
-        <button class="team-modal-close" id="teamModalClose" aria-label="Cerrar modal">&times;</button>
-        <div id="teamModalBody"></div>
-      </div>
-    </div>
+      <!-- In-Page Detail View (Ficha de Equipo & Duelo Directo) -->
+      <section class="tab-content" id="tab-detail">
+        <div class="phase-selector" id="detailTopSelector">
+          <button type="button" class="phase-btn active" id="detailBackBtn">Volver</button>
+        </div>
+        <div class="team-modal-card" id="teamModalCard">
+          <div id="teamModalBody"></div>
+        </div>
+      </section>
+    </main>
 
     <!-- Loading Overlay -->
     <div class="loading-overlay" id="loadingOverlay">

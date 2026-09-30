@@ -6,6 +6,7 @@
 const App = (() => {
   let data = null;
   let currentTab = 'standings';
+  let previousTab = 'standings';
   let currentPhase = 1;
   let currentFixturePhase = 0; // index into data.fixture
   let currentFixtureRoundIndex = 0;
@@ -38,7 +39,7 @@ const App = (() => {
     },
     'trotenham': {
       name: 'Trotenham',
-      color: '#ad7affff', // Violeta
+      color: '#b16cffff', // Violeta
       ovr: 72, atq: 73, med: 70, def: 74, pot: 81, reg: 65
     },
     'vinesse': {
@@ -63,7 +64,7 @@ const App = (() => {
     },
     'atomos': {
       name: 'Atomos',
-      color: '#0099ffff', // Azul
+      color: '#6d38ffff', // Azul
       ovr: 64, atq: 62, med: 64, def: 69, pot: 67, reg: 65
     },
     'real toros f.c.': {
@@ -257,9 +258,9 @@ const App = (() => {
         return;
       }
 
-      // 4. Close modal triggers
-      if (e.target.id === 'teamModalClose' || e.target.closest('#teamModalClose') || e.target.id === 'teamModalOverlay' || e.target.id === 'compModalCloseBtn' || e.target.closest('#compModalCloseBtn')) {
-        closeTeamStatsModal();
+      // 4. Volver / Back triggers
+      if (e.target.id === 'detailBackBtn' || e.target.closest('#detailBackBtn') || e.target.id === 'compModalCloseBtn' || e.target.closest('#compModalCloseBtn') || e.target.id === 'teamModalClose' || e.target.closest('#teamModalClose')) {
+        closeDetailView();
         return;
       }
 
@@ -1061,6 +1062,8 @@ const App = (() => {
     const def = STAT_DEFINITIONS[currentStatExplIndex];
 
     const listEl = document.getElementById('teamModalStatsList');
+    const compDesktopStats = document.getElementById('compDesktopStats');
+    const compMobileStats = document.getElementById('compMobileStats');
     const explEl = document.getElementById('teamModalStatExpl');
     const titleEl = document.getElementById('statExplTitle');
     const descEl = document.getElementById('statExplDesc');
@@ -1069,13 +1072,19 @@ const App = (() => {
     if (descEl) descEl.textContent = def.desc;
 
     if (listEl) listEl.classList.add('hidden');
+    if (compDesktopStats) compDesktopStats.classList.add('hidden');
+    if (compMobileStats) compMobileStats.classList.add('hidden');
     if (explEl) explEl.classList.remove('hidden');
   }
 
   function hideStatExplanation() {
     const listEl = document.getElementById('teamModalStatsList');
+    const compDesktopStats = document.getElementById('compDesktopStats');
+    const compMobileStats = document.getElementById('compMobileStats');
     const explEl = document.getElementById('teamModalStatExpl');
     if (listEl) listEl.classList.remove('hidden');
+    if (compDesktopStats) compDesktopStats.classList.remove('hidden');
+    if (compMobileStats) compMobileStats.classList.remove('hidden');
     if (explEl) explEl.classList.add('hidden');
   }
 
@@ -1085,10 +1094,12 @@ const App = (() => {
 
   function openTeamStatsModal(teamName) {
     if (!teamName) return;
+    previousTab = currentTab;
     const prof = getTeamProfile(teamName);
     const logoHtml = getTeamLogoHtml(teamName);
     const modalBody = document.getElementById('teamModalBody');
-    const modalOverlay = document.getElementById('teamModalOverlay');
+    const card = document.getElementById('teamModalCard');
+    if (card) card.classList.remove('is-match-comparison');
 
     const statRows = [
       { name: 'Mediocampo', code: 'MED', val: prof.med, idx: 0 },
@@ -1134,25 +1145,20 @@ const App = (() => {
     `;
 
     hideStatExplanation();
-    const closeBtn = document.getElementById('teamModalClose');
-    if (closeBtn) closeBtn.style.display = '';
-    modalOverlay.classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
+    showDetailView();
   }
 
   function openMatchComparisonModal(homeName, awayName) {
     if (!homeName || !awayName) return;
+    previousTab = currentTab;
     const prof1 = getTeamProfile(homeName);
     const prof2 = getTeamProfile(awayName);
 
     const logo1 = getTeamLogoHtml(homeName);
     const logo2 = getTeamLogoHtml(awayName);
     const modalBody = document.getElementById('teamModalBody');
-    const modalOverlay = document.getElementById('teamModalOverlay');
-
-    // Hide top-right close icon in match comparison so it doesn't overlap the logo
-    const closeBtn = document.getElementById('teamModalClose');
-    if (closeBtn) closeBtn.style.display = 'none';
+    const card = document.getElementById('teamModalCard');
+    if (card) card.classList.add('is-match-comparison');
 
     const statRows = [
       { name: 'Mediocampo', code: 'MED', v1: prof1.med, v2: prof2.med, idx: 0 },
@@ -1161,6 +1167,8 @@ const App = (() => {
       { name: 'Regularidad', code: 'REG', v1: prof1.reg, v2: prof2.reg, idx: 3 },
       { name: 'Ataque', code: 'ATQ', v1: prof1.atq, v2: prof2.atq, idx: 4 },
     ];
+
+    const radarSvg = generateComparisonRadarSvg(homeName, prof1, awayName, prof2);
 
     modalBody.innerHTML = `
       <div class="comp-modal-header">
@@ -1171,7 +1179,9 @@ const App = (() => {
             <span class="comp-team-ovr" style="border-color: ${prof1.color}; color: ${prof1.color}">OVR <strong>${prof1.ovr}</strong></span>
           </div>
         </div>
-        <div class="comp-vs-badge">VS</div>
+        <div class="comp-vs-badge-wrap">
+          <div class="comp-vs-badge">VS</div>
+        </div>
         <div class="comp-team-card away">
           <div class="comp-team-info right">
             <span class="comp-team-name">${escapeHtml(prof2.name || awayName)}</span>
@@ -1181,28 +1191,65 @@ const App = (() => {
         </div>
       </div>
 
-      <div class="team-modal-radar-wrap">
-        ${generateComparisonRadarSvg(homeName, prof1, awayName, prof2)}
-      </div>
-
-      <div class="comp-stats-list" id="teamModalStatsList">
-        ${statRows.map(r => `
-          <div class="comp-stat-row stat-clickable-row" data-stat-idx="${r.idx}" data-stat-code="${r.code}" title="Tocar para ver significado de ${r.name}">
-            <span class="comp-stat-num left" style="color: ${prof1.color}">${r.v1}</span>
-            <div class="comp-bars-wrap">
-              <div class="comp-bar-half left">
-                <div class="comp-bar-fill left" style="width: ${r.v1}%; background: ${prof1.color};"></div>
+      <!-- DESKTOP 3-COLUMN LAYOUT (Screen >= 768px) -->
+      <div class="comp-desktop-grid desktop-only" id="compDesktopStats">
+        <!-- Left Column: Team 1 stats -->
+        <div class="comp-pc-stats-box left">
+          ${statRows.map(r => `
+            <div class="comp-pc-stat-row stat-clickable-row" data-stat-idx="${r.idx}" data-stat-code="${r.code}" title="Tocar para ver significado de ${r.name}">
+              <span class="comp-stat-num left" style="color: ${prof1.color}">${r.v1}</span>
+              <div class="stat-bar-track">
+                <div class="stat-bar-fill" style="width: ${r.v1}%; background: ${prof1.color};"></div>
               </div>
-              <span class="comp-stat-label">${r.code}</span>
-              <div class="comp-bar-half right">
-                <div class="comp-bar-fill right" style="width: ${r.v2}%; background: ${prof2.color};"></div>
-              </div>
+              <span class="comp-stat-label right">${r.code}</span>
             </div>
-            <span class="comp-stat-num right" style="color: ${prof2.color}">${r.v2}</span>
-          </div>
-        `).join('')}
+          `).join('')}
+        </div>
+
+        <!-- Center Column: Radar -->
+        <div class="team-modal-radar-wrap comp-radar-desktop">
+          ${radarSvg}
+        </div>
+
+        <!-- Right Column: Team 2 stats -->
+        <div class="comp-pc-stats-box right">
+          ${statRows.map(r => `
+            <div class="comp-pc-stat-row stat-clickable-row" data-stat-idx="${r.idx}" data-stat-code="${r.code}" title="Tocar para ver significado de ${r.name}">
+              <span class="comp-stat-label left">${r.code}</span>
+              <div class="stat-bar-track">
+                <div class="stat-bar-fill" style="width: ${r.v2}%; background: ${prof2.color};"></div>
+              </div>
+              <span class="comp-stat-num right" style="color: ${prof2.color}">${r.v2}</span>
+            </div>
+          `).join('')}
+        </div>
       </div>
 
+      <!-- MOBILE STACKED LAYOUT (Screen < 768px) -->
+      <div class="comp-mobile-wrap mobile-only" id="compMobileStats">
+        <div class="team-modal-radar-wrap">
+          ${radarSvg}
+        </div>
+        <div class="comp-stats-list">
+          ${statRows.map(r => `
+            <div class="comp-stat-row stat-clickable-row" data-stat-idx="${r.idx}" data-stat-code="${r.code}" title="Tocar para ver significado de ${r.name}">
+              <span class="comp-stat-num left" style="color: ${prof1.color}">${r.v1}</span>
+              <div class="comp-bars-wrap">
+                <div class="comp-bar-half left">
+                  <div class="comp-bar-fill left" style="width: ${r.v1}%; background: ${prof1.color};"></div>
+                </div>
+                <span class="comp-stat-label">${r.code}</span>
+                <div class="comp-bar-half right">
+                  <div class="comp-bar-fill right" style="width: ${r.v2}%; background: ${prof2.color};"></div>
+                </div>
+              </div>
+              <span class="comp-stat-num right" style="color: ${prof2.color}">${r.v2}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- Stat Explanation Carousel (Shared) -->
       <div class="stat-expl-card hidden" id="teamModalStatExpl">
         <div class="stat-expl-header">
           <button type="button" class="stat-expl-nav-btn prev" id="statExplPrev" aria-label="Anterior">◀</button>
@@ -1212,26 +1259,28 @@ const App = (() => {
         <p class="stat-expl-desc" id="statExplDesc"></p>
         <button type="button" class="stat-expl-back-btn" id="statExplBack">✕ VOLVER</button>
       </div>
-
-      <div class="comp-footer-actions">
-        <button type="button" class="comp-back-modal-btn" id="compModalCloseBtn">CERRAR</button>
-      </div>
     `;
 
     hideStatExplanation();
-    modalOverlay.classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
+    showDetailView();
+  }
+
+  function showDetailView() {
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    const detailTab = document.getElementById('tab-detail');
+    if (detailTab) {
+      detailTab.classList.add('active');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+
+  function closeDetailView() {
+    hideStatExplanation();
+    switchTab(previousTab || 'standings');
   }
 
   function closeTeamStatsModal() {
-    const modalOverlay = document.getElementById('teamModalOverlay');
-    const closeBtn = document.getElementById('teamModalClose');
-    if (closeBtn) closeBtn.style.display = '';
-    if (modalOverlay) {
-      modalOverlay.classList.add('hidden');
-      document.body.style.overflow = '';
-      hideStatExplanation();
-    }
+    closeDetailView();
   }
 
   function escapeHtml(str) {
