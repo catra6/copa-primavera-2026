@@ -109,7 +109,7 @@ const TournamentEngine = (() => {
     const isPlaceholder = (name) => {
       if (!name) return true;
       const lower = name.toLowerCase().trim();
-      return lower === 'a definir' || lower === 'por definir' || lower === 'vacío' || lower === 'vacio' || lower.includes('grupo 1') || lower.includes('grupo 2');
+      return lower === 'a definir' || lower === 'por definir' || lower === 'vacío' || lower === 'vacio' || lower === '-' || lower === 'tbd';
     };
 
     const groupsMap = {};

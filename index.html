@@ -5,10 +5,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <meta name="description" content="Torneo de fútbol - Grupos, fixture y resultados en vivo">
-  <meta name="theme-color" content="#ffffff">
+  <meta name="theme-color" content="#030822">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <title>⚽ Copa Primavera 2026</title>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>⭐ Copa Primavera 2026</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
@@ -18,14 +18,31 @@
 
 <body>
   <div id="app">
+    <!-- Starball watermark background -->
+    <div class="ucl-bg-watermark" aria-hidden="true"></div>
+
     <!-- Header -->
     <header class="app-header">
       <div class="header-content">
         <div class="header-left">
-          <span class="header-icon">⚽</span>
+          <div class="ucl-starball-icon">
+            <svg viewBox="0 0 100 100" width="34" height="34" fill="none">
+              <circle cx="50" cy="50" r="46" fill="#08184a" stroke="#00f0ff" stroke-width="2.2"/>
+              <g fill="#ffffff">
+                <polygon points="50.0,22.0 51.3,25.2 54.8,25.5 52.1,27.7 52.9,31.0 50.0,29.2 47.1,31.0 47.9,27.7 45.2,25.5 48.7,25.2" />
+                <polygon points="69.8,30.2 68.4,33.4 70.7,36.0 67.3,35.7 65.5,38.7 64.7,35.3 61.3,34.5 64.3,32.7 64.0,29.3 66.6,31.6" />
+                <polygon points="78.0,50.0 74.8,51.3 74.5,54.8 72.3,52.1 69.0,52.9 70.8,50.0 69.0,47.1 72.3,47.9 74.5,45.2 74.8,48.7" />
+                <polygon points="69.8,69.8 66.6,68.4 64.0,70.7 64.3,67.3 61.3,65.5 64.7,64.7 65.5,61.3 67.3,64.3 70.7,64.0 68.4,66.6" />
+                <polygon points="50.0,78.0 48.7,74.8 45.2,74.5 47.9,72.3 47.1,69.0 50.0,70.8 52.9,69.0 52.1,72.3 54.8,74.5 51.3,74.8" />
+                <polygon points="30.2,69.8 31.6,66.6 29.3,64.0 32.7,64.3 34.5,61.3 35.3,64.7 38.7,65.5 35.7,67.3 36.0,70.7 33.4,68.4" />
+                <polygon points="22.0,50.0 25.2,48.7 25.5,45.2 27.7,47.9 31.0,47.1 29.2,50.0 31.0,52.9 27.7,52.1 25.5,54.8 25.2,51.3" />
+                <polygon points="30.2,30.2 33.4,31.6 36.0,29.3 35.7,32.7 38.7,34.5 35.3,35.3 34.5,38.7 32.7,35.7 29.3,36.0 31.6,33.4" />
+              </g>
+            </svg>
+          </div>
           <div>
             <h1 class="app-title">Copa Primavera 2026</h1>
-            <span class="app-subtitle">Fase de grupos</span>
+            <span class="app-subtitle">Torneo Oficial</span>
           </div>
         </div>
       </div>
@@ -42,10 +59,15 @@
     <main class="main-content" id="mainContent">
       <!-- Standings Tab -->
       <section class="tab-content active" id="tab-standings">
-        <!-- Phase Selector -->
-        <div class="phase-selector" id="phaseSelector">
-          <button class="phase-btn active" data-phase="1">Fase 1</button>
-          <button class="phase-btn" data-phase="2">Fase 2</button>
+        <!-- Standings Header Row: Phase Selector + View Mode Toggle -->
+        <div class="standings-header-row">
+          <div class="phase-selector" id="phaseSelector">
+            <button class="phase-btn active" data-phase="1">Fase 1</button>
+            <button class="phase-btn" data-phase="2">Fase 2</button>
+          </div>
+          <button class="view-toggle-btn" id="viewToggleBtn" aria-label="Alternar vista">
+            <span class="view-toggle-text">Vista simple</span>
+          </button>
         </div>
         <div id="groupsContainer"></div>
       </section>
@@ -64,6 +86,14 @@
         <div id="playoffsContainer"></div>
       </section>
     </main>
+
+    <!-- Team Stats Modal (PES-Style Pentagon Radar) -->
+    <div class="team-modal-overlay hidden" id="teamModalOverlay" aria-hidden="true">
+      <div class="team-modal-card" id="teamModalCard">
+        <button class="team-modal-close" id="teamModalClose" aria-label="Cerrar modal">&times;</button>
+        <div id="teamModalBody"></div>
+      </div>
+    </div>
 
     <!-- Loading Overlay -->
     <div class="loading-overlay" id="loadingOverlay">

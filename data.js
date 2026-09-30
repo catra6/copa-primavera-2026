@@ -107,7 +107,12 @@ const DataSource = (() => {
 
       // Phase header (e.g. "Fase 1", "Fase 2")
       if (col1.startsWith('Fase ')) {
-        currentPhase = { name: col1, rounds: [] };
+        const pjIdx = row.findIndex(c => (c || '').trim().toUpperCase() === 'PJ');
+        let playedCount = null;
+        if (pjIdx !== -1 && row[pjIdx + 1] !== undefined && row[pjIdx + 1].trim() !== '') {
+          playedCount = parseInt(row[pjIdx + 1].trim()) || 0;
+        }
+        currentPhase = { name: col1, playedCount, rounds: [] };
         phases.push(currentPhase);
         i++;
         continue;
@@ -394,11 +399,19 @@ const DataSource = (() => {
         fetchLogos(),
       ]);
 
-      // Parse teams list
+      // Parse teams list and abbreviations
       const teams = [];
+      const abbreviations = {};
       for (let i = 2; i < equiposRows.length; i++) {
         const name = (equiposRows[i][1] || '').trim();
-        if (name) teams.push(name);
+        const abbr = (equiposRows[i][3] || equiposRows[i][2] || '').trim();
+        if (name) {
+          teams.push(name);
+          if (abbr) {
+            abbreviations[name] = abbr;
+            abbreviations[name.toLowerCase()] = abbr;
+          }
+        }
       }
 
       const fase1 = parseStandings(fase1Rows);
@@ -407,7 +420,7 @@ const DataSource = (() => {
       const playoffs = parsePlayoffs(playoffsRows);
 
       console.log('✅ Data & logos loaded from Google Sheets');
-      return { teams, fase1, fase2, fixture, playoffs, logos, lastUpdated: new Date().toISOString() };
+      return { teams, abbreviations, fase1, fase2, fixture, playoffs, logos, lastUpdated: new Date().toISOString() };
     } catch (err) {
       console.error('❌ Failed to load from Sheets:', err);
       throw err;
